@@ -1,14 +1,15 @@
 server:
-  port: 9090  # 保持 9090 不变，避免和前端冲突
+  port: 9090
 
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 数据库连接配置
     url: jdbc:mysql://localhost:3306/volunteer_platform?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8
     username: root
-    password: 123456
+    password: 123456 # 确认你的密码
 
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# ❌ 注意：这里不要留 logic-delete-field 和 files.upload.path 配置！
