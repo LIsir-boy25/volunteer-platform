@@ -8,16 +8,14 @@ import lombok.Data;
 @Data
 @TableName("activity")
 public class Activity {
+
     @TableId(type = IdType.AUTO)
     private Integer id;
-    private String name;
-    private String type;
-    private String content;
+
+    private String name;       // 活动名称
+    private String type;       // 活动类型
+    private String content;    // 活动内容
     private String startTime;  // 开始时间
     private String endTime;    // 结束时间
-    private String location;
-    private String img;
-    private Integer maxPeople;
-    private Integer score;
-    private String status;
+    private String location;   // 活动地点
 }
