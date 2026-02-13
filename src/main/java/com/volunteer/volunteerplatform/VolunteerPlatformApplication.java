@@ -14,11 +14,10 @@ public class VolunteerPlatformApplication {
         SpringApplication.run(VolunteerPlatformApplication.class, args);
     }
 
-    // --- 【这就是我们要加的关键代码】开启分页插件 ---
+    // ✅ 补回分页插件，否则 .page() 方法会报错或失效
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 设置数据库类型为 MySQL
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         return interceptor;
     }

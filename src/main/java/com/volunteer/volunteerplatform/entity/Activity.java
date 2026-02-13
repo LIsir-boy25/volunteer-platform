@@ -17,24 +17,25 @@ public class Activity {
     private String type;
     private String content;
 
-    // ✅ 对应数据库的 time 字段
+    // ✅ 改名：对应前端的 time
     private String time;
 
-    // ✅ 对应数据库的 signup_time 字段 (自动驼峰转换)
+    // ✅ 改名：对应前端的 signupTime (数据库 signup_time)
     private String signupTime;
 
-    // ✅ 对应数据库的 address 字段
+    // ✅ 改名：对应前端的 address
     private String address;
 
-    // ✅ 对应数据库的 num 字段
+    // ✅ 改名：对应前端的 num (数据库 num)
     private Integer num;
 
-    // ✅ 对应数据库的 credit 字段
+    // ✅ 改名：对应前端的 credit (数据库 credit)
     private Integer credit;
 
     private String status;
 
-    // ✅ 必须保留，防止后端报 500 错误
+    // ✅ 保留此字段：虽然 yml 里删了全局配置，但加上这个注解可以单独为 Activity 表开启逻辑删除
+    // 只要你的数据库 activity 表里有 deleted 字段，这就不会报错
     @TableLogic
     private Integer deleted;
 }
