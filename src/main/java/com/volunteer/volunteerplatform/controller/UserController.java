@@ -21,59 +21,76 @@ public class UserController {
         if (sysUser.getUsername() == null || sysUser.getPassword() == null) {
             return Result.error("用户名或密码不能为空");
         }
+
         SysUser loginUser = userService.login(sysUser.getUsername(), sysUser.getPassword());
+
+        if (loginUser == null) {
+            return Result.error("用户名或密码错误");
+        }
+
+        // 【核心修复：向下兼容老数据的越权拦截】
+        if (sysUser.getRole() != null) {
+            String dbRole = loginUser.getRole();
+            // 兼容判断：前端传 ADMIN，能匹配数据库的 ADMIN 也能匹配老数据 ROLE_ADMIN
+            boolean roleMatch = sysUser.getRole().equals(dbRole) || ("ROLE_" + sysUser.getRole()).equals(dbRole);
+
+            if (!roleMatch) {
+                return Result.error("身份选择错误，您没有该权限访问！");
+            }
+        }
+
         return Result.success(loginUser);
     }
 
-    // 2. 注册 (增加了账号名唯一和学号唯一双重校验)
+    // 2. 注册
     @PostMapping("/register")
     public Result register(@RequestBody SysUser sysUser) {
-        // a. 基本非空校验
         if (sysUser.getUsername() == null || sysUser.getPassword() == null || sysUser.getStudentId() == null) {
             return Result.error("必填项不能为空");
         }
 
-        // b. 校验登录账号(username)是否已存在
         QueryWrapper<SysUser> nameQuery = new QueryWrapper<>();
         nameQuery.eq("username", sysUser.getUsername());
         if (userService.count(nameQuery) > 0) {
             return Result.error("该登录账号已存在，请换一个");
         }
 
-        // c. 【核心新增】校验学号(studentId)是否已存在
         QueryWrapper<SysUser> studentIdQuery = new QueryWrapper<>();
         studentIdQuery.eq("student_id", sysUser.getStudentId());
         if (userService.count(studentIdQuery) > 0) {
             return Result.error("该学号已注册过账号，请直接登录或找回密码");
         }
 
-        // d. 执行保存
+        if (sysUser.getRole() == null) {
+            sysUser.setRole("USER"); // 现在新注册的都统一存简洁版 USER
+        }
+
         userService.save(sysUser);
         return Result.success();
     }
 
-    // 3. 修改资料 (个人中心使用)
-    @PostMapping("/update")
-    public Result update(@RequestBody SysUser user) {
-        if (user.getId() == null) {
+    // 3. 新增或修改资料
+    @PostMapping
+    public Result save(@RequestBody SysUser user) {
+        if (user.getUsername() == null) {
             return Result.error("参数错误");
         }
-        userService.updateById(user);
+        userService.saveOrUpdate(user);
         return Result.success();
     }
 
-    // 4. 根据ID查询 (解决个人中心404)
+    // 4. 根据ID查询
     @GetMapping("/{id}")
     public Result getById(@PathVariable Integer id) {
         SysUser user = userService.getById(id);
         if (user != null) {
-            user.setPassword(null); // 不返回密码
+            user.setPassword(null);
             return Result.success(user);
         }
         return Result.error("未找到该用户");
     }
 
-    // 5. 分页查询 (管理端)
+    // 5. 分页查询
     @GetMapping("/page")
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,

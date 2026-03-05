@@ -29,12 +29,14 @@ public class NoticeController {
         return Result.success();
     }
 
+    // 单条删除
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
         noticeService.removeById(id);
         return Result.success();
     }
 
+    // 分页查询
     @GetMapping("/page")
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
@@ -46,5 +48,11 @@ public class NoticeController {
         }
         queryWrapper.orderByDesc("id");
         return Result.success(noticeService.page(page, queryWrapper));
+    }
+
+    // 根据 ID 查询单条公告详情
+    @GetMapping("/{id}")
+    public Result getById(@PathVariable Integer id) {
+        return Result.success(noticeService.getById(id));
     }
 }

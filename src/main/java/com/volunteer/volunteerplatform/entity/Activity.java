@@ -34,6 +34,9 @@ public class Activity {
 
     private String status;
 
+    // ✅ 新增：用来保存前端上传的活动封面图片链接
+    private String img;
+
     // ✅ 保留此字段：虽然 yml 里删了全局配置，但加上这个注解可以单独为 Activity 表开启逻辑删除
     // 只要你的数据库 activity 表里有 deleted 字段，这就不会报错
     @TableLogic

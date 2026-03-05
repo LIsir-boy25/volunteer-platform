@@ -4,7 +4,7 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # ⚠️ 确认你的数据库密码是 123456
+    # ⚠️ 确认你的数据库密码是 root
     url: jdbc:mysql://localhost:3306/volunteer_platform?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8
     username: root
     password: root
@@ -16,6 +16,8 @@ spring:
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  # ❌ 我把 global-config (逻辑删除) 删掉了，SysUser 和 Notice 就不会报错了！
 
-# ❌ 我把 files (文件上传) 删掉了，防止路径报错
+# ✅ 加回文件上传配置，使用动态路径，绝对不会再报找不到路径的错！
+files:
+  upload:
+    path: ${user.dir}/files/
