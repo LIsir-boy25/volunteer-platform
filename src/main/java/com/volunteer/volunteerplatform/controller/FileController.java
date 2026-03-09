@@ -13,6 +13,7 @@ import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.util.UUID;
 
+@CrossOrigin // <--- 【核心修复】：加上这一行，允许前端跨域上传图片！
 @RestController
 @RequestMapping("/file")
 public class FileController {

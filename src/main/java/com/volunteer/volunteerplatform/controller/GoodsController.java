@@ -23,7 +23,6 @@ public class GoodsController {
 
     @PostMapping
     public Result save(@RequestBody Goods goods) {
-        // 如果新增时没有传状态，默认设置为"上架"
         if (goods.getStatus() == null) {
             goods.setStatus("上架");
         }
@@ -37,7 +36,6 @@ public class GoodsController {
         return Result.success();
     }
 
-    // 【核心改造】：增加了 status 参数，用于过滤上下架状态
     @GetMapping("/page")
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
@@ -48,9 +46,12 @@ public class GoodsController {
             queryWrapper.like("name", name);
         }
         if (!"".equals(status)) {
-            queryWrapper.eq("status", status); // 按状态查询
+            queryWrapper.eq("status", status);
         }
-        queryWrapper.orderByDesc("id");
+
+        // 【关键修复】：改为正序排列，使 ID 顺序从小到大
+        queryWrapper.orderByAsc("id");
+
         return Result.success(goodsService.page(new Page<>(pageNum, pageSize), queryWrapper));
     }
 
@@ -58,24 +59,13 @@ public class GoodsController {
     @Transactional
     public Result exchange(@PathVariable Integer userId, @PathVariable Integer goodsId) {
         Goods goods = goodsService.getById(goodsId);
-        if (goods == null) {
-            return Result.error("该商品不存在！");
-        }
-        // 防止意外兑换已下架商品
-        if ("下架".equals(goods.getStatus())) {
-            return Result.error("该商品已下架，无法兑换！");
-        }
-        if (goods.getStore() <= 0) {
-            return Result.error("手慢啦，商品库存不足，已被兑换完！");
-        }
+        if (goods == null) return Result.error("该商品不存在！");
+        if ("下架".equals(goods.getStatus())) return Result.error("该商品已下架！");
+        if (goods.getStore() <= 0) return Result.error("库存不足！");
 
         SysUser user = userService.getById(userId);
-        if (user == null) {
-            return Result.error("用户信息异常，请重新登录！");
-        }
-        if (user.getScore() < goods.getScore()) {
-            return Result.error("您的积分不足，快去参加志愿活动赚取积分吧！");
-        }
+        if (user == null) return Result.error("用户异常！");
+        if (user.getScore() < goods.getScore()) return Result.error("积分不足！");
 
         user.setScore(user.getScore() - goods.getScore());
         userService.updateById(user);
