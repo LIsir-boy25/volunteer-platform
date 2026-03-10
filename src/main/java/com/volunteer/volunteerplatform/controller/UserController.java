@@ -28,10 +28,9 @@ public class UserController {
             return Result.error("用户名或密码错误");
         }
 
-        // 【核心修复：向下兼容老数据的越权拦截】
+        // 向下兼容老数据的越权拦截
         if (sysUser.getRole() != null) {
             String dbRole = loginUser.getRole();
-            // 兼容判断：前端传 ADMIN，能匹配数据库的 ADMIN 也能匹配老数据 ROLE_ADMIN
             boolean roleMatch = sysUser.getRole().equals(dbRole) || ("ROLE_" + sysUser.getRole()).equals(dbRole);
 
             if (!roleMatch) {
@@ -62,7 +61,7 @@ public class UserController {
         }
 
         if (sysUser.getRole() == null) {
-            sysUser.setRole("USER"); // 现在新注册的都统一存简洁版 USER
+            sysUser.setRole("USER");
         }
 
         userService.save(sysUser);
@@ -100,7 +99,10 @@ public class UserController {
         if (!"".equals(username)) {
             queryWrapper.like("username", username);
         }
-        queryWrapper.orderByDesc("id");
+
+        // 【核心修改】：组合排序！先按 role 升序(A在前,U在后)，再按 id 降序(最新注册的在前)
+        queryWrapper.orderByAsc("role").orderByDesc("id");
+
         return Result.success(userService.page(page, queryWrapper));
     }
 
