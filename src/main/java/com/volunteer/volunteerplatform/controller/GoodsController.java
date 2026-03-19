@@ -2,6 +2,7 @@ package com.volunteer.volunteerplatform.controller;
 
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.volunteer.volunteerplatform.common.Result;
 import com.volunteer.volunteerplatform.entity.Goods;
@@ -58,9 +59,9 @@ public class GoodsController {
         return Result.success(goodsService.page(new Page<>(pageNum, pageSize), queryWrapper));
     }
 
-    // 【核心改造】：改成接收 GoodsExchange 实体，里面包含了前端传来的地址和电话
+    // 【核心改造：防超卖与积分并发控制机制】
     @PostMapping("/exchange")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class) // 开启事务，遇到报错自动回滚
     public Result exchange(@RequestBody GoodsExchange exchange) {
         Integer userId = exchange.getUserId();
         Integer goodsId = exchange.getGoodsId();
@@ -74,14 +75,27 @@ public class GoodsController {
         if (user == null) return Result.error("用户异常！");
         if (user.getScore() < goods.getScore()) return Result.error("您的积分不足以兑换此商品！");
 
-        // 1. 扣分减库存
-        user.setScore(user.getScore() - goods.getScore());
-        userService.updateById(user);
+        // 1. 扣减库存 (利用数据库排他锁防超卖)
+        UpdateWrapper<Goods> goodsUpdateWrapper = new UpdateWrapper<>();
+        goodsUpdateWrapper.eq("id", goods.getId())
+                .gt("store", 0) // 并发时确保库存>0
+                .setSql("store = store - 1");
+        boolean updateGoods = goodsService.update(goodsUpdateWrapper);
+        if (!updateGoods) {
+            throw new RuntimeException("手慢了，商品刚刚被抢光！"); // 抛出异常触发回滚
+        }
 
-        goods.setStore(goods.getStore() - 1);
-        goodsService.updateById(goods);
+        // 2. 扣减积分 (利用数据库并发锁防透支)
+        UpdateWrapper<SysUser> userUpdateWrapper = new UpdateWrapper<>();
+        userUpdateWrapper.eq("id", user.getId())
+                .ge("score", goods.getScore()) // 并发时确保余额仍然充足
+                .setSql("score = score - " + goods.getScore());
+        boolean updateUser = userService.update(userUpdateWrapper);
+        if (!updateUser) {
+            throw new RuntimeException("您的积分在其他页面发生变动，余额不足！"); // 抛出异常触发回滚
+        }
 
-        // 2. 补全兑换订单信息（包含了前端传来的 phone 和 address）并保存
+        // 3. 补全兑换订单信息并保存流水
         exchange.setGoodsName(goods.getName());
         exchange.setGoodsImg(goods.getImg());
         exchange.setScore(goods.getScore());

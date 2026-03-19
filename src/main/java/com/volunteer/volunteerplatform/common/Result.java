@@ -22,9 +22,18 @@ public class Result<T> {
         return result;
     }
 
+    // 默认的 500 服务器错误
     public static <T> Result<T> error(String msg) {
         Result<T> result = new Result<>();
         result.setCode("500");
+        result.setMsg(msg);
+        return result;
+    }
+
+    // 【核心新增】支持自定义状态码的错误返回（用于配合前端的 401 拦截）
+    public static <T> Result<T> error(String code, String msg) {
+        Result<T> result = new Result<>();
+        result.setCode(code);
         result.setMsg(msg);
         return result;
     }

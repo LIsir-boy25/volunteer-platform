@@ -21,4 +21,8 @@ public class ActivityReview {
     private String nickname;
     @TableField(exist = false)
     private String activityName;
+
+    // 【核心新增】：数据库不存在的字段，用来给前端显示头像
+    @TableField(exist = false)
+    private String avatar;
 }

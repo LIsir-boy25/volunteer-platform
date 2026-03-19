@@ -61,11 +61,13 @@ public class ActivityReviewController {
 
         // 循环补全信息给前端显示
         for (ActivityReview record : page.getRecords()) {
-            // 补全发布人姓名
+            // 补全发布人姓名和头像
             if (record.getUserId() != null) {
                 SysUser user = userService.getById(record.getUserId());
                 if (user != null) {
                     record.setNickname(user.getNickname());
+                    // 【核心修复】：把 sys_user 表里的头像查出来，赋值给心得记录传给前端
+                    record.setAvatar(user.getAvatar());
                 }
             }
             // 补全活动主题名称
