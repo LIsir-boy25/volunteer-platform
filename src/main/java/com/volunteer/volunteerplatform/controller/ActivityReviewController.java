@@ -13,6 +13,8 @@ import com.volunteer.volunteerplatform.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/review")
 public class ActivityReviewController {
@@ -26,14 +28,40 @@ public class ActivityReviewController {
     @Autowired
     private IActivityService activityService;
 
-    // 1. 新增心得
+    /**
+     * 1. 保存心得（带重复校验）
+     */
     @PostMapping
     public Result save(@RequestBody ActivityReview review) {
+        // 🌟 核心逻辑：如果是新增（id为空），先检查数据库是否已经存在该用户对该活动的心得
         if (review.getId() == null) {
+            QueryWrapper<ActivityReview> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("user_id", review.getUserId());
+            queryWrapper.eq("activity_id", review.getActivityId());
+
+            if (reviewService.getOne(queryWrapper) != null) {
+                // 🌟 优雅报错：不再弹出红色天书，而是返回一个温馨提示
+                return Result.error("400", "您已经发布过该活动的心得，请勿重复发布！");
+            }
             review.setCreateTime(DateUtil.now());
         }
+
+        // 执行保存或更新
         reviewService.saveOrUpdate(review);
         return Result.success();
+    }
+
+    /**
+     * 🌟 新增接口：根据用户ID和活动ID获取心得内容
+     * 用于前端判断“是否已发过”以及“查看我的心得”功能
+     */
+    @GetMapping("/getByUser")
+    public Result getByUser(@RequestParam Integer activityId, @RequestParam Integer userId) {
+        QueryWrapper<ActivityReview> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        queryWrapper.eq("activity_id", activityId);
+        ActivityReview review = reviewService.getOne(queryWrapper);
+        return Result.success(review);
     }
 
     // 2. 删除心得
@@ -43,15 +71,14 @@ public class ActivityReviewController {
         return Result.success();
     }
 
-    // 3. 分页查询（包含跨表搜索与名字补全）
+    // 3. 分页查询（保持您原有的逻辑）
     @GetMapping("/page")
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
-                           @RequestParam(defaultValue = "") String activityName) { // 【新增】：接收前端传来的搜索词
+                           @RequestParam(defaultValue = "") String activityName) {
 
         QueryWrapper<ActivityReview> queryWrapper = new QueryWrapper<>();
 
-        // 【核心优化】：解决跨表搜索！如果前端输入了活动主题，利用子查询去活动表里反查活动 ID
         if (!"".equals(activityName)) {
             queryWrapper.inSql("activity_id", "select id from activity where name like '%" + activityName + "%'");
         }
@@ -59,18 +86,14 @@ public class ActivityReviewController {
         queryWrapper.orderByDesc("id");
         Page<ActivityReview> page = reviewService.page(new Page<>(pageNum, pageSize), queryWrapper);
 
-        // 循环补全信息给前端显示
         for (ActivityReview record : page.getRecords()) {
-            // 补全发布人姓名和头像
             if (record.getUserId() != null) {
                 SysUser user = userService.getById(record.getUserId());
                 if (user != null) {
                     record.setNickname(user.getNickname());
-                    // 【核心修复】：把 sys_user 表里的头像查出来，赋值给心得记录传给前端
                     record.setAvatar(user.getAvatar());
                 }
             }
-            // 补全活动主题名称
             if (record.getActivityId() != null) {
                 Activity activity = activityService.getById(record.getActivityId());
                 if (activity != null) {

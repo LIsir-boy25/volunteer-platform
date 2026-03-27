@@ -5,13 +5,17 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.volunteer.volunteerplatform.common.Result;
 import com.volunteer.volunteerplatform.entity.Activity;
+import com.volunteer.volunteerplatform.entity.ActivityReview;
 import com.volunteer.volunteerplatform.entity.ActivitySignup;
 import com.volunteer.volunteerplatform.entity.SysUser;
 import com.volunteer.volunteerplatform.service.IActivityService;
 import com.volunteer.volunteerplatform.service.IActivitySignupService;
+import com.volunteer.volunteerplatform.service.IActivityReviewService;
 import com.volunteer.volunteerplatform.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/activitySignup")
@@ -26,6 +30,9 @@ public class ActivitySignupController {
     @Autowired
     private IActivityService activityService;
 
+    @Autowired
+    private IActivityReviewService reviewService; // 🌟 注入心得服务，用于状态核对
+
     @PostMapping
     public Result save(@RequestBody ActivitySignup activitySignup) {
         if (activitySignup.getId() == null) {
@@ -37,17 +44,15 @@ public class ActivitySignupController {
                 return Result.error("您已报名过该活动，请勿重复报名！");
             }
 
-            // 2. 【容量闭环核心】：检查活动名额是否已满
+            // 2. 检查活动名额是否已满
             Activity activity = activityService.getById(activitySignup.getActivityId());
             if (activity == null) return Result.error("活动不存在！");
 
-            // 统计当前已占坑的人数（待审核、审核通过、已完成的都算占用名额）
             QueryWrapper<ActivitySignup> countQuery = new QueryWrapper<>();
             countQuery.eq("activity_id", activitySignup.getActivityId());
             countQuery.ne("status", "审核不通过");
             long signedCount = activitySignupService.count(countQuery);
 
-            // 【修复点】：直接使用 activity.getNum() 进行比较，不再调用 parseInt
             if (activity.getNum() != null && signedCount >= activity.getNum()) {
                 return Result.error("非常抱歉，该活动名额已满！");
             }
@@ -82,6 +87,9 @@ public class ActivitySignupController {
         return Result.success();
     }
 
+    /**
+     * 🌟 修改后的查询：为移动端或简单列表补全 hasReview 🌟
+     */
     @GetMapping
     public Result findAll(@RequestParam(required = false) Integer userId) {
         QueryWrapper<ActivitySignup> queryWrapper = new QueryWrapper<>();
@@ -89,9 +97,19 @@ public class ActivitySignupController {
             queryWrapper.eq("user_id", userId);
         }
         queryWrapper.orderByDesc("id");
-        return Result.success(activitySignupService.list(queryWrapper));
+        List<ActivitySignup> list = activitySignupService.list(queryWrapper);
+
+        // 遍历设置心得状态
+        for (ActivitySignup record : list) {
+            record.setHasReview(checkReviewStatus(record.getUserId(), record.getActivityId()));
+        }
+        return Result.success(list);
     }
 
+    /**
+     * 🌟 修改后的分页查询：核心修复点 🌟
+     * 遍历分页结果中的每一条记录，核对是否已发心得
+     */
     @GetMapping("/page")
     public Result findPage(@RequestParam Integer pageNum, @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") String name, @RequestParam(required = false) Integer userId) {
@@ -103,7 +121,33 @@ public class ActivitySignupController {
         if (userId != null) {
             queryWrapper.eq("user_id", userId);
         }
-        return Result.success(activitySignupService.page(new Page<>(pageNum, pageSize), queryWrapper));
+
+        // 1. 获取原始分页数据
+        Page<ActivitySignup> page = activitySignupService.page(new Page<>(pageNum, pageSize), queryWrapper);
+
+        // 2. 🌟 遍历 records，根据 userId 和 activityId 补全 hasReview 状态
+        for (ActivitySignup record : page.getRecords()) {
+            // 只有当状态为“已完成”时，检查心得状态才有意义
+            if ("已完成".equals(record.getStatus())) {
+                record.setHasReview(checkReviewStatus(record.getUserId(), record.getActivityId()));
+            } else {
+                record.setHasReview(false);
+            }
+        }
+
+        return Result.success(page);
+    }
+
+    /**
+     * 🌟 私有辅助方法：从数据库核对心得记录是否存在
+     */
+    private Boolean checkReviewStatus(Integer userId, Integer activityId) {
+        if (userId == null || activityId == null) return false;
+        QueryWrapper<ActivityReview> qw = new QueryWrapper<>();
+        qw.eq("user_id", userId);
+        qw.eq("activity_id", activityId);
+        // 如果能查到记录（count > 0），则表示已经发布过心得
+        return reviewService.count(qw) > 0;
     }
 
     @DeleteMapping("/{id}")

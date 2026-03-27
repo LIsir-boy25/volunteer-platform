@@ -17,6 +17,8 @@ public class SysUser {
     private String phone;
     private String address;
     private String role;
+
+    // 🌟 头像字段已经在这里了，完全没问题！
     private String avatar;
 
     // 志愿者专属字段

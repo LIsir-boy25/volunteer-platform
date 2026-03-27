@@ -6,9 +6,14 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.io.Serializable; // 🌟 1. 新增：引入序列化接口包
+
 @Data
 @TableName("activity")
-public class Activity {
+public class Activity implements Serializable { // 🌟 2. 新增：实现序列化接口
+
+    // 🌟 3. 新增：序列化版本号（Java 规范，防止反序列化时因为类结构微调而报错）
+    private static final long serialVersionUID = 1L;
 
     @TableId(type = IdType.AUTO)
     private Integer id;

@@ -1,9 +1,14 @@
 package com.volunteer.volunteerplatform.common;
 
 import lombok.Data;
+import java.io.Serializable; // 🌟 1. 新增：引入序列化包
 
 @Data
-public class Result<T> {
+public class Result<T> implements Serializable { // 🌟 2. 新增：实现序列化接口
+
+    // 🌟 3. 新增：序列化版本号
+    private static final long serialVersionUID = 1L;
+
     private String code; // 状态码
     private String msg;  // 提示信息
     private T data;      // 返回数据

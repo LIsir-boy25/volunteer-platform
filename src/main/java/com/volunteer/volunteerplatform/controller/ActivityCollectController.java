@@ -7,7 +7,7 @@ import com.volunteer.volunteerplatform.common.Result;
 import com.volunteer.volunteerplatform.entity.Activity;
 import com.volunteer.volunteerplatform.entity.ActivityCollect;
 import com.volunteer.volunteerplatform.service.IActivityService;
-import com.volunteer.volunteerplatform.service.IActivityCollectService; // 【补上的关键代码：引入收藏Service】
+import com.volunteer.volunteerplatform.service.IActivityCollectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

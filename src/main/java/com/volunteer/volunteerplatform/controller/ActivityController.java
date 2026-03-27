@@ -9,7 +9,7 @@ import com.volunteer.volunteerplatform.service.IActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List; // ✅ 补充导入 List，防止报错
+import java.util.List;
 
 @RestController
 @RequestMapping("/activity")
@@ -56,7 +56,7 @@ public class ActivityController {
         return Result.success(activityService.page(page, queryWrapper));
     }
 
-    // ✅ 新增：根据 ID 查询单条活动详情
+    // 根据 ID 查询单条活动详情
     @GetMapping("/{id}")
     public Result getById(@PathVariable Integer id) {
         return Result.success(activityService.getById(id));

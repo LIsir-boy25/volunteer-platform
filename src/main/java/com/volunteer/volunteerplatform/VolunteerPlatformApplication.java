@@ -14,7 +14,7 @@ public class VolunteerPlatformApplication {
         SpringApplication.run(VolunteerPlatformApplication.class, args);
     }
 
-    // ✅ 补回分页插件，否则 .page() 方法会报错或失效
+    // 🌟 就是漏掉了这一段：配置 MyBatis-Plus 分页插件，保证分页功能正常工作
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
