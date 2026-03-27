@@ -35,31 +35,32 @@ public class EchartsController {
         map.put("activityTotal", activityService.count()); // 志愿活动总数
         map.put("signupTotal", signupService.count()); // 累计报名人次
 
-        // 服务时长：这里做个简单的演示累加，实际可根据业务表关联
-        map.put("timeTotal", signupService.count() * 4); // 假设每次报名平均算4小时
+        // 已完成的报名人次 * 4小时 = 累计服务时长
+        QueryWrapper<ActivitySignup> completedQuery = new QueryWrapper<>();
+        completedQuery.eq("status", "已完成");
+        map.put("timeTotal", signupService.count(completedQuery) * 4);
+
         return Result.success(map);
     }
 
-    // 2. 获取近七日报名趋势数据（带平稳的模拟数据）
+    // 2. 获取近七日报名趋势数据（真实按日期聚合查询）
     @GetMapping("/trend")
     public Result getTrend() {
         List<String> dateList = new ArrayList<>();
-        // 获取最近7天的日期
-        for (int i = 6; i >= 0; i--) {
-            dateList.add(DateUtil.formatDate(DateUtil.offsetDay(new Date(), -i)));
-        }
-
         List<Integer> countList = new ArrayList<>();
-        long baseCount = signupService.count(); // 获取真实的报名基数
 
-        // 构造相对平稳的趋势线，避免答辩时图表剧烈跳动
-        countList.add((int) baseCount + 2);
-        countList.add((int) baseCount + 5);
-        countList.add((int) baseCount + 3);
-        countList.add((int) baseCount + 8);
-        countList.add((int) baseCount + 4);
-        countList.add((int) baseCount + 7);
-        countList.add((int) baseCount + 10);
+        // 获取最近7天的日期及每天的报名数
+        for (int i = 6; i >= 0; i--) {
+            Date date = DateUtil.offsetDay(new Date(), -i);
+            String dateStr = DateUtil.formatDate(date);
+            dateList.add(dateStr);
+
+            // 查询当天报名记录数：signup_time 以该日期开头
+            QueryWrapper<ActivitySignup> query = new QueryWrapper<>();
+            query.like("signup_time", dateStr);
+            long count = signupService.count(query);
+            countList.add((int) count);
+        }
 
         Map<String, Object> map = new HashMap<>();
         map.put("dates", dateList);
@@ -72,7 +73,7 @@ public class EchartsController {
     public Result getTypeDistribution() {
         List<Activity> list = activityService.list();
 
-        // 【防空指针处理】按类型分组并计数，过滤掉没有类型的脏数据
+        // 按类型分组并计数，过滤掉没有类型的脏数据
         Map<String, Long> collect = list.stream()
                 .filter(a -> a.getType() != null && !a.getType().trim().isEmpty())
                 .collect(Collectors.groupingBy(Activity::getType, Collectors.counting()));
